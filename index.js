@@ -1,91 +1,105 @@
-const express = require('express')
-const app = express()
+const express = require("express");
+const mongoose = require("mongoose");
+const Character = require("./models/Character");
+const app = express();
 
-app.use(express.json()) // All the output as json
+app.use(express.json()); // All the output as json
 
-const characters = [
+// Getting the database
+try {
+  mongoose.connect(
+    "mongodb+srv://admin:admin@cluster0.mu3cu.mongodb.net/myFirstDatabase?retryWrites=true&w=majority",
     {
-        id: 1,
-        name: "Harry Potter",
-        species: "human",
-        house: "Gryffindor",
-        actor: "Daniel Redcliffe"
-    },
-    null,
-    {
-        id: 2,
-        name: "Hermione Granger",
-        species: "human",
-        house: "Gryffindor",
-        actor: "Emma Watson"
-    },
-]
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    }
+  );
+  console.log("Database connected successfully!");
+} catch (err) {
+  // If error detected...
+  console.log("ERROR: database not connected :/");
+}
 
-
-app.get('/', (req, res) => {
-  res.send(characters.filter(Boolean)) // Bring all the non-null ones
-})
+app.get("/", (req, res) => {
+  res.send(characters.filter(Boolean)); // Bring all the non-falsy ones
+});
 
 // ADD CHARACTER
-app.post('/add-character', (req, res) => {
-    const character = req.body // Getting inputs from the body
+app.post("/add-character", async (req, res) => {
+  // Asynchronous function
+  const { name, species, house, actor } = req.body; // Getting inputs from the body
 
-    character.id = characters.length++
-    characters.push(character) // Adding the character to the array
+  // Checking if client has sent all the required data
+  if (!name || !species || !house || !actor) {
+    res.status(400).send({ message: "Missing data" });
+    return;
+  }
 
-    res.send({message: "Character added successfully!"})
-})
+  // Creating the model
+  const character = await new Character({
+    name,
+    species,
+    house,
+    actor,
+  });
+
+  await character.save();
+
+  res.send({ message: "Character added successfully!" });
+});
 
 // Get a given character
-app.get('/character/:id', (req, res) => {
-    const id = +req.params.id
-    // Looking for through the whole characters array
-    const character = characters.find((c) => c.id === id)
+app.get("/character/:id", (req, res) => {
+  const id = +req.params.id;
+  // Looking for through the whole characters array
+  const character = characters.find((c) => c.id === id);
 
-    if (!character) { // If not found display a message
-        res.status(404).send({message: "Character not found :/"})
-        return
-    }
+  if (!character) {
+    // If not found display a message
+    res.status(404).send({ message: "Character not found :/" });
+    return;
+  }
 
-    res.send(character)
-})
+  res.send(character);
+});
 
 // Update a given character
-app.put('/character/:id', (req, res) => {
-    const id = +req.params.id
-    const character = characters.find((c) => c.id === id)
+app.put("/character/:id", (req, res) => {
+  const id = +req.params.id;
+  const character = characters.find((c) => c.id === id);
 
-    if (!character) {
-        res.status(404).send({message: "Character not found :/"})
-        return
-    }
+  if (!character) {
+    res.status(404).send({ message: "Character not found :/" });
+    return;
+  }
 
-    const {name, species, house, actor} = req.body
+  const { name, species, house, actor } = req.body;
 
-    character.name = name
-    character.species = species
-    character.house = house
-    character.actor = actor
+  character.name = name;
+  character.species = species;
+  character.house = house;
+  character.actor = actor;
 
-    res.send(character)
-})
+  res.send(character);
+});
 
 // Deleting a given character
-app.delete('/character/:id', (req, res) => {
-    const id = +req.params.id
-    const character = characters.find((c) => c.id === id)
+app.delete("/character/:id", (req, res) => {
+  const id = +req.params.id;
+  const character = characters.find((c) => c.id === id);
 
-    if (!character) {
-        res.status(404).send({message: "Character not found :/"})
-        return
-    }
+  if (!character) {
+    res.status(404).send({ message: "Character not found :/" });
+    return;
+  }
 
-    // Deleting the character
-    delete characters[characters.indexOf(character)]
+  // Deleting the character
+  delete characters[characters.indexOf(character)];
 
-    res.send({message: 'Character deleted successfully!'})
-})
+  res.send({ message: "Character deleted successfully!" });
+});
 
-app.listen(3000, () => { // Run the server 
-    console.log('Server running at http://localhost:3000')
-})
+app.listen(3000, () => {
+  // Run the server
+  console.log("Server running at http://localhost:3000");
+});
