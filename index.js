@@ -1,14 +1,16 @@
+require('dotenv').config()
 const express = require("express");
 const mongoose = require("mongoose");
 const Character = require("./models/Character");
 const app = express();
 
 app.use(express.json()); // All the output as json
+const port = process.env.PORT || 3000 // Adapted server port
 
 // Getting the database
 try {
   mongoose.connect(
-    "mongodb+srv://admin:admin@cluster0.mu3cu.mongodb.net/myFirstDatabase?retryWrites=true&w=majority",
+    process.env.DATABASE_URI, // Getting a variable from the environment
     {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -114,7 +116,7 @@ app.delete("/character/:id", async (req, res) => {
   res.send({ message: "Character deleted successfully!" });
 });
 
-app.listen(3000, () => {
+app.listen(port, () => {
   // Run the server
-  console.log("Server running at http://localhost:3000");
+  console.log(`Server running at http://localhost:${port}`);
 });
