@@ -20,13 +20,16 @@ try {
   console.log("ERROR: database not connected :/");
 }
 
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
+  const characters = await Character.find();
+  if (characters.length === 0)
+    res.status(404).send({ message: "No registered characters :/" });
+
   res.send(characters.filter(Boolean)); // Bring all the non-falsy ones
 });
 
 // ADD CHARACTER
 app.post("/add-character", async (req, res) => {
-  // Asynchronous function
   const { name, species, house, actor } = req.body; // Getting inputs from the body
 
   // Checking if client has sent all the required data
@@ -49,52 +52,64 @@ app.post("/add-character", async (req, res) => {
 });
 
 // Get a given character
-app.get("/character/:id", (req, res) => {
-  const id = +req.params.id;
-  // Looking for through the whole characters array
-  const character = characters.find((c) => c.id === id);
+app.get("/character/:id", async (req, res) => {
+  const { id } = req.params;
 
-  if (!character) {
-    // If not found display a message
-    res.status(404).send({ message: "Character not found :/" });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(404).send({ message: "Invalid ID :/" });
     return;
   }
+
+  const character = await Character.findById(id);
+  if (!character) res.status(404).send({ message: "Character not found :/" });
 
   res.send(character);
 });
 
 // Update a given character
-app.put("/character/:id", (req, res) => {
-  const id = +req.params.id;
-  const character = characters.find((c) => c.id === id);
+app.put("/character/:id", async (req, res) => {
+  const { id } = req.params;
 
-  if (!character) {
-    res.status(404).send({ message: "Character not found :/" });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(404).send({ message: "Invalid ID :/" });
     return;
   }
 
-  const { name, species, house, actor } = req.body;
+  // Getting the character
+  const character = await Character.findById(id);
+  if (!character) res.status(404).send({ message: "Character not found :/" });
 
+  // Checking if it's missing input
+  const { name, species, house, actor } = req.body;
+  if (!name || !species || !house || !actor) {
+    res.status(400).send({ message: "Missing data" });
+    return;
+  }
+
+  // Updating the character properties
   character.name = name;
   character.species = species;
   character.house = house;
   character.actor = actor;
 
-  res.send(character);
+  await character.save();
+
+  res.send({ message: `Character updated successfully`, character: character });
 });
 
 // Deleting a given character
-app.delete("/character/:id", (req, res) => {
-  const id = +req.params.id;
-  const character = characters.find((c) => c.id === id);
+app.delete("/character/:id", async (req, res) => {
+  const { id } = req.params;
 
-  if (!character) {
-    res.status(404).send({ message: "Character not found :/" });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(404).send({ message: "Invalid ID :/" });
     return;
   }
 
-  // Deleting the character
-  delete characters[characters.indexOf(character)];
+  const character = await Character.findById(id);
+  if (!character) return res.status(404).send({message: "Character not found :/"})
+
+  await character.remove();
 
   res.send({ message: "Character deleted successfully!" });
 });
